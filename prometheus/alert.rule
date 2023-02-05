@@ -1,0 +1,31 @@
+groups:
+- name: alert.rules
+  rules:
+  - alert: EndpointDown
+    expr: probe_success == 0
+    for: 10s
+    labels:
+      severity: "critical"
+    annotations:
+      summary: "Endpoint {{ $labels.instance }} down"
+
+  - alert: BlackboxSlowProbe
+    expr: avg_over_time(probe_duration_seconds[1m]) > 1
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: Blackbox slow probe (instance {{ $labels.instance }})
+      description: "Blackbox probe took more than 1s to complete\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+- name: node-exporter.rules
+  rules:
+  - alert: NodeHasRebooted
+    annotations:
+      description: Node has rebooted
+      summary: Node {{ (or $labels.node $labels.instance) }} has rebooted {{ $value }} seconds ago.
+    expr: |
+            (time() - node_boot_time_seconds < 600) and (time() - 600 - (node_boot_time_seconds offset 10m) > 600)
+    labels:
+      severity: critical
+
